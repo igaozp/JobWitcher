@@ -1,18 +1,14 @@
 # -*- coding: utf-8 -*-
 
-# Define here the models for your spider middleware
-#
-# See documentation in:
-# https://doc.scrapy.org/en/latest/topics/spider-middleware.html
-
 from scrapy import signals
+import requests
+import logging
+import random
+
+logger = logging.getLogger(__name__)
 
 
 class ZhaopinSpiderMiddleware(object):
-    # Not all methods need to be defined. If a method is not defined,
-    # scrapy acts as if the spider middleware does not modify the
-    # passed objects.
-
     @classmethod
     def from_crawler(cls, crawler):
         # This method is used by Scrapy to create your spiders.
@@ -101,3 +97,23 @@ class ZhaopinDownloaderMiddleware(object):
 
     def spider_opened(self, spider):
         spider.logger.info('Spider opened: %s' % spider.name)
+
+
+class ProxyMiddleware(object):
+    def __init__(self):
+        logger.info('获取代理池')
+        json_data = requests.get('http://123.207.35.36:5010/get_status/').json()
+        proxy_size = json_data['useful_proxy']
+        proxy_list = set([])
+        for i in range(0, proxy_size):
+            content = str(requests.get('http://123.207.35.36:5010/get/').content, encoding='utf-8')
+            proxy = 'http://{}:{}'.format(content.split(':')[0], content.split(':')[1])
+            proxy_list.add(proxy)
+            logger.info('Proxy: ' + proxy)
+        logger.info('共找到 %s 个代理'.format(len(proxy_list)))
+        self.proxy_list = proxy_list
+
+    def process_request(self, request, spider):
+        proxy = random.choice(list(self.proxy_list))
+        logger.info('正在使用代理: ' + proxy)
+        request.meta['proxy'] = proxy
