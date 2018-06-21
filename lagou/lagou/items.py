@@ -1,14 +1,32 @@
 # -*- coding: utf-8 -*-
 
-# Define here the models for your scraped items
-#
-# See documentation in:
-# https://doc.scrapy.org/en/latest/topics/items.html
-
 import scrapy
 
 
 class LagouItem(scrapy.Item):
-    # define the fields for your item here like:
-    # name = scrapy.Field()
-    pass
+    # 工作名称
+    job_name = scrapy.Field()
+    # 所在城市
+    city = scrapy.Field()
+    # 招聘页面的 URL
+    url = scrapy.Field()
+    # 工作福利
+    job_advantage = scrapy.Field()
+    # 公司地址
+    address = scrapy.Field()
+    # 发布日期
+    public_date = scrapy.Field()
+    # 职位描述
+    description = scrapy.Field()
+    # 学历要求
+    education = scrapy.Field()
+    # 工作经验
+    experience = scrapy.Field()
+    # 公司名称
+    company_name = scrapy.Field()
+    # 薪水
+    salary = scrapy.Field()
+    # 公司规模
+    company_size = scrapy.Field()
+    # 页面抓取时间
+    crawled_date = scrapy.Field()
