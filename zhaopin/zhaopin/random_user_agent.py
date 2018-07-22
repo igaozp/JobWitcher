@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+__author__ = 'igaozp'
 
 from scrapy.downloadermiddlewares.useragent import UserAgentMiddleware
 import logging

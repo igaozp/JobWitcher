@@ -89,7 +89,7 @@ class LiepinPipeline(object):
 
     def insert_data(self, item):
         """
-        向数据库插入输入
+        向数据库插入数据
         :param item: 插入数据的对象实例
         """
 

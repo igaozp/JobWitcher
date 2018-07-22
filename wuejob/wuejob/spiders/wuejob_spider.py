@@ -12,6 +12,9 @@ logger = logging.getLogger(__name__)
 
 
 class WueJobSpider(Spider):
+    """
+    51Job 爬虫
+    """
     name = 'wuejob_spider'
 
     allowed_domains = ['www.51job.com']
@@ -166,10 +169,11 @@ class WueJobSpider(Spider):
 
         # 爬取下一页
         pages = soup.select('#resultList > div.dw_page > div > div > div > ul > li > a')
-        next_page = pages[-1].get('href')
-        if next_page is not None:
-            logger.info('Next page: ' + next_page)
-            yield Request(url=next_page, callback=self.parse, dont_filter=True)
+        if len(pages) is not 0:
+            next_page = pages[-1].get('href')
+            if next_page is not None:
+                logger.info('Next page: ' + next_page)
+                yield Request(url=next_page, callback=self.parse, dont_filter=True)
 
     @staticmethod
     def parse_content(response):
@@ -181,6 +185,7 @@ class WueJobSpider(Spider):
         soup = BeautifulSoup(response.body, 'lxml')
         item = response.meta['item']
 
+        # 获取职位的详细信息
         address = soup.select('body > div.tCompanyPage > div.tCompany_center.clearfix > div.tCompany_main > '
                               'div:nth-of-type(3) > div > p')[0].get_text().strip()
         experience = soup.select('body > div.tCompanyPage > div.tCompany_center.clearfix > div.tCompany_main > '

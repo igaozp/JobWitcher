@@ -1,6 +1,9 @@
+# -*- coding: utf-8 -*-
+__author__ = 'igaozp'
+
 from scrapy import Spider, Request
 from bs4 import BeautifulSoup
-from lagou.items import LagouItem
+from ..items import LagouItem
 import redis
 import datetime
 import logging
@@ -10,6 +13,9 @@ logger = logging.getLogger(__name__)
 
 
 class LagouSpider(Spider):
+    """
+    拉勾网爬虫
+    """
     name = "lagou_spider"
 
     allowed_domains = ['www.lagou.com']
@@ -19,7 +25,6 @@ class LagouSpider(Spider):
 
     custom_settings = {
         'COOKIES_ENABLE': False,
-        'DOWNLOAD_DELAY': 1,
         'DEFAULT_REQUEST_HEADERS': {
             'Accept': 'application/json, text/javascript, */*; q=0.01',
             'Accept-Encoding': 'gzip, deflate, br',
@@ -43,7 +48,8 @@ class LagouSpider(Spider):
         }
     }
 
-    def __init__(self):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self.logger.info('初始化 Redis 连接')
         self.redis_pool = redis.ConnectionPool(host='127.0.0.1', port=6379, password='', db=11)
         self.redis_db = redis.Redis(connection_pool=self.redis_pool)
@@ -52,7 +58,6 @@ class LagouSpider(Spider):
         """
         开始发送请求
         """
-
         # 获取所有职位列表的 URL
         response = requests.get('https://www.lagou.com/')
         soup = BeautifulSoup(response.text, 'lxml')
@@ -73,10 +78,8 @@ class LagouSpider(Spider):
     def parse(self, response):
         """
         解析职位列表的信息
-
         :param response: 页面的请求数据
         """
-
         soup = BeautifulSoup(response.text, 'lxml')
 
         job_name_list = soup.select(
@@ -141,11 +144,9 @@ class LagouSpider(Spider):
     def parse_content(response):
         """
         解析职位页面的详细信息
-
         :param response: 页面的请求数据
         :return: item 实例
         """
-
         soup = BeautifulSoup(response.body, 'lxml')
         item = response.meta['item']
 
