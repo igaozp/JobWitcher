@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
+
 __author__ = 'igaozp'
 
 from ..items import ZhaopinItem
 from scrapy import Spider, Request
-from urllib.parse import quote
 from bs4 import BeautifulSoup
 import datetime
 import logging
 import redis
-import re
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -19,12 +19,8 @@ class ZhaopinSpider(Spider):
     """
     name = "zhaopin_spider"
 
-    allowed_domains = ['www.zhaopin.com']
+    allowed_domains = ['www.zhaopin.com', 'sou.zhaopin.com', 'fe-api.zhaopin.com', 'jobs.zhaopin.com']
     start_urls = ['http://www.zhaopin.com/']
-
-    custom_settings = {
-        'Referer': 'https://sou.zhaopin.com'
-    }
 
     def __init__(self, **kwargs):
         """
@@ -37,90 +33,82 @@ class ZhaopinSpider(Spider):
         self.redis_db = redis.Redis(connection_pool=self.redis_pool)
 
         self.headers = {
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
-            'Accept-Encoding': 'gzip, deflate',
+            'Accept': 'application/json, text/plain, */*',
+            'Accept-Encoding': 'gzip, deflate, br',
             'Accept-Language': 'zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7,ja;q=0.6',
-            'Cache-Control': 'max-age=0',
             'Connection': 'keep-alive',
-            'Cookie': 'adfbid2=0; JSSearchModel=0; sts_deviceid=163918e1e734a5-08a878273b41c3-737356c-1327104-'
-                      '163918e1e74377; dywez=95841923.1527669355.18.4.dywecsr=google.com|dyweccn=(referral)|dywecmd='
-                      'referral|dywectr=undefined|dywecct=/; LastJobTag=%e4%ba%94%e9%99%a9%e4%b8%80%e9%87%91%7c%e8%8a%'
-                      '82%e6%97%a5%e7%a6%8f%e5%88%a9%7c%e5%b8%a6%e8%96%aa%e5%b9%b4%e5%81%87%7c%e7%bb%a9%e6%95%88%e5%a5%'
-                      '96%e9%87%91%7c%e9%a4%90%e8%a1%a5%7c%e5%b9%b4%e5%ba%95%e5%8f%8c%e8%96%aa%7c%e5%ae%9a%e6%9c%9f%e4%'
-                      'bd%93%e6%a3%80%7c%e5%91%98%e5%b7%a5%e6%97%85%e6%b8%b8%7c%e5%bc%b9%e6%80%a7%e5%b7%a5%e4%bd%9c%7c%'
-                      'e5%85%a8%e5%8b%a4%e5%a5%96%7c%e5%91%a8%e6%9c%ab%e5%8f%8c%e4%bc%91%7c%e8%a1%a5%e5%85%85%e5%8c%bb%'
-                      'e7%96%97%e4%bf%9d%e9%99%a9%7c%e4%ba%a4%e9%80%9a%e8%a1%a5%e5%8a%a9%7c%e5%8a%a0%e7%8f%ad%e8%a1%a5'
-                      '%e5%8a%a9%7c%e5%b9%b4%e7%bb%88%e5%88%86%e7%ba%a2%7c%e6%af%8f%e5%b9%b4%e5%a4%9a%e6%ac%a1%e8%b0%83'
-                      '%e8%96%aa%7c%e5%88%9b%e4%b8%9a%e5%85%ac%e5%8f%b8%7c%e5%8c%85%e4%bd%8f%7c%e8%82%a1%e7%a5%a8%e6%9c'
-                      '%9f%e6%9d%83%7c%e9%80%9a%e8%ae%af%e8%a1%a5%e8%b4%b4%7c%e5%81%a5%e8%ba%ab%e4%bf%b1%e4%b9%90%e9%83'
-                      '%a8%7c%e6%88%bf%e8%a1%a5%7c%e4%b8%8d%e5%8a%a0%e7%8f%ad%7c%e5%8c%85%e5%90%83%7c14%e8%96%aa%7c%e5'
-                      '%85%8d%e8%b4%b9%e7%8f%ad%e8%bd%a6%7c%e4%bd%8f%e6%88%bf%e8%a1%a5%e8%b4%b4%7c%e6%97%a0%e8%af%95%'
-                      'e7%94%a8%e6%9c%9f%7c%e9%ab%98%e6%b8%a9%e8%a1%a5%e8%b4%b4%7c%e9%87%87%e6%9a%96%e8%a1%a5%e8%b4%'
-                      'b4%7c%e5%85%8d%e6%81%af%e6%88%bf%e8%b4%b7; LastSearchHistory=%7b%22Id%22%3a%2285f29195-d292-'
-                      '4883-8628-7045cc256302%22%2c%22Name%22%3a%22%e5%8c%97%e4%ba%ac+%2b+%e7%bd%91%e7%bb%9c%e6%b8%b8'
-                      '%e6%88%8f%22%2c%22SearchUrl%22%3a%22http%3a%2f%2fsou.zhaopin.com%2fjobs%2fsearchresult.ashx%'
-                      '3fin%3d160600%26jl%3d%25e5%258c%2597%25e4%25ba%25ac%26p%3d1%26isadv%3d0%22%2c%22SaveTime%22%3a%'
-                      '22%5c%2fDate(1527672678730%2b0800)%5c%2f%22%7d; ZP_OLD_FLAG=false; LastCity=%E7%83%9F%E5%8F%B0; '
-                      'LastCity%5Fid=707; urlfrom2=121126445; adfcid2=none; __lnkrntdmcvrd=-1; campusOperateJobUserInfo'
-                      '=f125b035-8a63-4dae-b978-db160fa7520b; zg_did=%7B%22did%22%3A%20%22163cad48de050b-0935d24a14ae55'
-                      '-737356c-144000-163cad48de1135%22%7D; zg_08c5bcee6e9a4c0594a5d34b79b9622a=%7B%22sid%22%3A%201528'
-                      '116317673%2C%22updated%22%3A%201528116908342%2C%22info%22%3A%201528116317677%2C%22superProperty%'
-                      '22%3A%20%22%7B%7D%22%2C%22platform%22%3A%20%22%7B%7D%22%2C%22utm%22%3A%20%22%7B%7D%22%2C%22refer'
-                      'rerDomain%22%3A%20%22sou.zhaopin.com%22%7D; dywea=95841923.1451030504579649300.1526544765.152811'
-                      '5754.1528168623.23; ZP-ENV-FLAG=gray; sts_sg=1; sts_sid=163d46dd9f651d-03c75c744aff55-737356c-'
-                      '1327104-163d46dd9f7477; __ads_session=VXgwn1f3GwlvLlkFFAA=; sts_evtseq=3',
+            'Cookie': 'adfbid2=0; sts_deviceid=163918e1e734a5-08a878273b41c3-737356c-1327104-163918e1e74377; '
+                      'zg_did=%7B%22did%22%3A%20%22163cad48de050b-0935d24a14ae55-737356c-144000-163cad48de1135'
+                      '%22%7D; urlfrom2=121126445; adfcid2=none; JSSearchModel=0; LastSearchHistory=%7b%22Id%2'
+                      '2%3a%221370e748-65e6-4768-899f-643c4def3c4d%22%2c%22Name%22%3a%22%e9%9d%92%e5%b2%9b%22%'
+                      '2c%22SearchUrl%22%3a%22http%3a%2f%2fsou.zhaopin.com%2fjobs%2fsearchresult.ashx%3fsm%3d0'
+                      '%26p%3d1%22%2c%22SaveTime%22%3a%22%5c%2fDate(1531192767261%2b0800)%5c%2f%22%7d; ZP_OLD_F'
+                      'LAG=false; zg_08c5bcee6e9a4c0594a5d34b79b9622a=%7B%22sid%22%3A%201532654517726%2C%22upda'
+                      'ted%22%3A%201532654517726%2C%22info%22%3A%201532654517730%2C%22superProperty%22%3A%20%22%'
+                      '7B%7D%22%2C%22platform%22%3A%20%22%7B%7D%22%2C%22utm%22%3A%20%22%7B%7D%22%2C%22referrerDom'
+                      'ain%22%3A%20%22www.zhaopin.com%22%2C%22landHref%22%3A%20%22https%3A%2F%2Foverseas.zhaopin.'
+                      'com%2F%22%7D; dywez=95841923.1532658528.37.10.dywecsr=sou.zhaopin.com|dyweccn=(referral)|dy'
+                      'wecmd=referral|dywectr=undefined|dywecct=/; urlfrom=121126445; adfcid=none; adfbid=0; sts_'
+                      'sg=1; dywec=95841923; zp_src_url=https%3A%2F%2Fwww.zhaopin.com%2F; GUID=754a375ce25b4a04ab4'
+                      '3b0f4fa09d438; LastCity=%E6%83%A0%E5%B7%9E; LastCity%5Fid=773; ZL_REPORT_GLOBAL={%22sou%22:'
+                      '{%22actionIdFromSou%22:%2208131a1e-7e6a-464f-bd61-a98c523977df-sou%22%2C%22funczone%22:%22s'
+                      'mart_matching%22}}; dywea=95841923.1451030504579649300.1526544765.1532681572.1532694108.39;'
+                      ' dyweb=95841923.2.10.1532694108; sts_sid=164dbb0164a28-062731b7180f95-47e1039-1327104-164'
+                      'dbb0164b133; sts_evtseq=2',
             'DNT': '1',
-            'Host': 'sou.zhaopin.com',
-            'Upgrade-Insecure-Requests': '1',
-            'Referer': 'https://sou.zhaopin.com/'
+            'Host': 'fe-api.zhaopin.com',
+            'Origin': 'https://sou.zhaopin.com',
+            'Referer': 'https://sou.zhaopin.com/',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
+                          '(KHTML, like Gecko) Chrome/67.0.3396.99 Safari/537.36'
         }
 
     def start_requests(self):
-        # URL 前缀包含计算机相关职位的参数信息
-        url_prefix = 'http://sou.zhaopin.com/jobs/searchresult.ashx?bj='
-        # URL 后缀
-        url_suffix = '&p=1&isadv=0'
-        # 全国主要城市列表
-        city_list = [
-            '北京', '上海', '广州', '深圳', '天津', '武汉', '西安',
-            '成都', '大连', '长春', '沈阳', '南京', '济南', '青岛',
-            '杭州', '苏州', '无锡', '宁波', '重庆', '郑州', '长沙',
-            '福州', '厦门', '哈尔滨', '石家庄', '合肥', '烟台', '太原',
-            '合肥', '温州', '烟台'
-        ]
-        # 行业类别
-        industry_list = [
-            '210500',
-            '160400',
-            '160000',
-            '160500',
-            '160200',
-            '300100',
-            '160100',
-            '160600',
-        ]
-        # 职位类别
-        background_list = [
-            '160000',
-            '160300',
-            '160200',
-            '160400',
-            '200500',
-            '200300',
-            '5001000',
+        url_prefix = 'https://fe-api.zhaopin.com/c/i/sou?start=60&pageSize=60&cityId='
+        url_suffix = '&industry=10100'
+
+        city_id = [
+            '489',  # 全国
+            '530',  # 北京
+            '538',  # 上海
+            '765',  # 深圳
+            '763',  # 广州
+            '531',  # 天津
+            '801',  # 成都
+            '653',  # 杭州
+            '736',  # 武汉
+            '600',  # 大连
+            '613',  # 长春
+            '635',  # 南京
+            '702',  # 济南
+            '703',  # 青岛
+            '639',  # 苏州
+            '599',  # 沈阳
+            '854',  # 西安
+            '719',  # 郑州
+            '749',  # 长沙
+            '551',  # 重庆
+            '622',  # 哈尔滨
+            '636',  # 无锡
+            '654',  # 宁波
+            '681',  # 福州
+            '682',  # 厦门
+            '565',  # 石家庄
+            '664',  # 合肥
+            '773',  # 惠州
         ]
 
-        # 拼接 URL
         urls = []
-        for city in city_list:
-            for industry in industry_list:
-                for background in background_list:
-                    url = url_prefix + background + '&in=' + industry + '&jl=' + quote(city) + url_suffix
-                    urls.append(url)
-                    logger.info('生成 URL: ' + url)
+        for city in city_id:
+            url = url_prefix + city + url_suffix;
+            urls.append(url)
 
         for url in urls:
-            yield Request(url=url, callback=self.parse)
+            prefix = url[:41]
+            suffix = url[44:]
+            logger.info('请求 {}'.format(url))
+            yield Request(url=url, meta={'suffix': suffix, 'prefix': prefix, 'url': url, 'page': 1},
+                          callback=self.parse)
 
     def parse(self, response):
         """
@@ -128,40 +116,43 @@ class ZhaopinSpider(Spider):
         :param response: 页面返回的相应数据
         :return: item 对象
         """
-        soup = BeautifulSoup(response.text, 'lxml')
 
-        # 当前搜索结果页面的列表
-        job_name_list = soup.select("table.newlist > tr > td.zwmc > div > a:nth-of-type(1)")
-        salary_list = soup.select("table.newlist > tr > td.zwyx")
-        date_list = soup.select("table.newlist > tr > td.gxsj > span")
-        city_list = soup.select("table.newlist > tr > td.gzdd")
+        data = json.loads(response.body_as_unicode())
+        total_num = data['data']['numFound']
+        results = data['data']['results']
+        prefix = response.meta['prefix']
+        suffix = response.meta['suffix']
+        url = response.meta['url']
+        page = int(response.meta['page'])
 
-        # job_name_list = soup.select("span.jobTitle")
-        # urls = soup.select(".infoBox a")
-        # salary_list = soup.select("div.salary")
-        # date_list = soup.select("div.timeState")
-        # city_list = soup.select("div.address")
+        if page * 60 < int(total_num):
+            for result in results:
+                logger.info('当前 URL {}'.format(url))
+                url = result['positionURL']
+                if self.redis_db.hexists('zhaopin_url', url):
+                    logger.info('重复的数据: ' + url)
+                    continue
 
-        for job_name, salary, date, city in zip(job_name_list, salary_list, date_list, city_list):
-            item = ZhaopinItem()
-            url = job_name.get('href')
-            if self.redis_db.hexists('zhaopin_url', url):
-                logger.info("重复的数据: " + url)
-                continue
-            logger.info('URL: ' + url)
-            item['url'] = url
-            item['job_name'] = job_name.get_text()
-            item['salary'] = salary.get_text()
-            item['release_date'] = date.get_text()
-            item['city'] = city.get_text()
+                logger.info('当前职位 URL: {}'.format(url))
 
-            yield Request(url=url, meta={"item": item}, callback=self.parse_content, dont_filter=True)
+                item = ZhaopinItem()
+                item['job_name'] = result['jobName']
+                item['release_date'] = result['timeState']
+                item['city'] = result['city']['display']
+                item['salary'] = result['salary']
+                item['url'] = url
+                item['experience'] = result['workingExp']['name']
+                item['company_name'] = result['company']['name']
+                item['company_size'] = result['company']['size']['name']
+                item['education_require'] = result['eduLevel']['name']
 
-        # 抓取下一页
-        if soup.select("a.next-page") is not None:
-            logger.info('Next page')
-            next_page_url = soup.select("a.next-page")[0].get('href')
-            yield Request(url=next_page_url, callback=self.parse, dont_filter=True)
+                yield Request(url=url, meta={'item': item}, callback=self.parse_content, dont_filter=True)
+
+        page = page + 1
+        if page * 60 < int(total_num):
+            url = prefix + str(page * 60) + suffix
+            yield Request(url=url, meta={'page': page, 'prefix': prefix, 'suffix': suffix, 'url': url},
+                          callback=self.parse, dont_filter=True)
 
     @staticmethod
     def parse_content(response):
@@ -170,38 +161,38 @@ class ZhaopinSpider(Spider):
         :param response: 页面返回的响应数据
         :return: item 对象
         """
-
-        # 招聘职位的要求信息
-        require_data = response.xpath(
-            '//body/div[@class="terminalpage clearfix"]/div'
-            '[@class="terminalpage-left"]/div[@class="terminalpage-main '
-            'clearfix"]/div[@class="tab-cont-box"]/div[1]/p'
-        ).extract()
-        require_data_middle = ''
-        for line in require_data:
-            temp = re.sub(r'<.*?>', r'', line, re.S)
-            require_data_middle = require_data_middle + re.sub(r'\s*', r'', temp, re.S)
-
-        job_soup = BeautifulSoup(response.body, 'lxml')
+        soup = BeautifulSoup(response.text, 'lxml')
         item = response.meta['item']
 
-        # 获取其他字段的信息
-        address = job_soup.select('div.terminalpage-main.clearfix > div > div:nth-of-type(1) > h2')[0].text.strip()
-        if address[-6:] == "查看职位地图":
-            address = address[:-7]
-        item['address'] = address
-        item['job_require'] = require_data_middle
-        item['experience'] = job_soup.select('div.terminalpage-left strong')[4].text.strip()
-        item['company_name'] = job_soup.select('div.fixed-inner-box h2')[0].text
-        item['company_size'] = job_soup.select('ul.terminal-ul.clearfix li strong')[8].text.strip()
-        item['head_count'] = job_soup.select('div.terminalpage-left strong')[6].text.strip()
-        item['education_require'] = job_soup.select('div.terminalpage-left strong')[5].text.strip()
-        item['time'] = datetime.date.today()
+        job_requires = soup.select('div.terminalpage-main.clearfix > div > div:nth-of-type(1) > p')
+        if len(job_requires) is 0:
+            job_requires = soup.select('div.responsibility.pos-common > div.pos-ul > div')
+        job_require = ''
+        for require in job_requires:
+            job_require = job_require + require.get_text().strip()
 
-        # item['job_require'] = job_soup.select('div.responsibility.pos-common > div.pos-ul')
-        # item['experience'] = job_soup.select('div.info-three.l > span:nth-child(2)')
-        # item['company_name'] = job_soup.select('div.promulgator-info.clearfix > h3 > a')
-        # item['company_size'] = job_soup.select('div.promulgator-info.clearfix > ul > li:nth-child(3) > strong')
-        # item['education_require'] = job_soup.select(' div.info-three.l > span:nth-child(3)')
+        try:
+            address = soup.select('div.company-box > ul > li:nth-of-type(4) > strong')[0].get_text().strip()
+        except Exception as err:
+            print(err)
+            address = ''
+        try:
+            if address is '':
+                address = soup.select('div.pos-common.work-add.cl > p.add-txt')[0].get_text().strip()
+        except Exception as err:
+            print(err)
+            address = ''
+        try:
+            if address is '':
+                address = soup.select('div.promulgator-info.clearfix > ul > li:'
+                                      'nth-of-type(5) > strong')[0].get_text().strip()
+        except Exception as err:
+            print(err)
+            address = ''
+
+        item['job_require'] = job_require
+        item['address'] = address
+        item['head_count'] = ''
+        item['time'] = datetime.date.today()
 
         yield item
