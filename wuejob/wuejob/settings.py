@@ -17,7 +17,7 @@ CONCURRENT_REQUESTS = 32
 # Configure a delay for requests for the same website (default: 0)
 # See https://doc.scrapy.org/en/latest/topics/settings.html#download-delay
 # See also autothrottle settings and docs
-DOWNLOAD_DELAY = 0.1
+# DOWNLOAD_DELAY = 0.1
 # The download delay setting will honor only one of:
 CONCURRENT_REQUESTS_PER_DOMAIN = 16
 CONCURRENT_REQUESTS_PER_IP = 16
@@ -54,9 +54,9 @@ DOWNLOADER_MIDDLEWARES = {
 
 # Configure item pipelines
 # See https://doc.scrapy.org/en/latest/topics/item-pipeline.html
-# ITEM_PIPELINES = {
-#    'wuejob.pipelines.WuejobPipeline': 300,
-# }
+ITEM_PIPELINES = {
+   'wuejob.pipelines.WuejobPipeline': 300,
+}
 
 # Enable and configure the AutoThrottle extension (disabled by default)
 # See https://doc.scrapy.org/en/latest/topics/autothrottle.html
@@ -81,7 +81,8 @@ DOWNLOADER_MIDDLEWARES = {
 
 # JOBDIR = 'job-dir'
 
-MYSQL_HOST = '127.0.0.1'
+# MYSQL_HOST = '127.0.0.1'
+MYSQL_HOST = '123.206.53.233'
 MYSQL_DB = 'job_spider_data'
 MYSQL_USER = 'root'
 MYSQL_PASSWORD = 'pasiwode'
