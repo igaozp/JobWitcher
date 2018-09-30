@@ -16,4 +16,4 @@ $python main.py
 ```
 
 ## LICENSE
-MIT
+[MIT](https://github.com/igaozp/JobWitcher/blob/master/LICENSE)
