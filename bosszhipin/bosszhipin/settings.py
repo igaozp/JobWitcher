@@ -80,9 +80,9 @@ ITEM_PIPELINES = {
 # HTTPCACHE_IGNORE_HTTP_CODES = []
 # HTTPCACHE_STORAGE = 'scrapy.extensions.httpcache.FilesystemCacheStorage'
 
-# MYSQL_HOST = '127.0.0.1'
-MYSQL_HOST = '123.206.53.233'
+# 本地数据库
+MYSQL_HOST = '127.0.0.1'
 MYSQL_DB = 'job_spider_data'
 MYSQL_USER = 'root'
-MYSQL_PASSWORD = 'pasiwode'
+MYSQL_PASSWORD = ''
 MYSQL_PORT = 3306

@@ -81,9 +81,8 @@ ITEM_PIPELINES = {
 
 # JOBDIR = 'job-dir'
 
-# MYSQL_HOST = '127.0.0.1'
-MYSQL_HOST = '123.206.53.233'
+MYSQL_HOST = '127.0.0.1'
 MYSQL_DB = 'job_spider_data'
 MYSQL_USER = 'root'
-MYSQL_PASSWORD = 'pasiwode'
+MYSQL_PASSWORD = ''
 MYSQL_PORT = 3306

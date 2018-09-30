@@ -51,5 +51,4 @@ class RandomUserAgent(UserAgentMiddleware):
     def process_request(self, request, spider):
         ua = random.choice(USER_AGENT_LIST)
         logger.info('当前 UA : ' + ua)
-        # ua = 'Mozilla/5.0 (compatible; Baiduspider-render/2.0; +http://www.baidu.com/search/spider.html)'
         request.headers.setdefault('User-Agent', ua)

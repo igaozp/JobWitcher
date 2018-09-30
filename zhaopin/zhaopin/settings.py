@@ -85,5 +85,5 @@ ITEM_PIPELINES = {
 MYSQL_HOST = '127.0.0.1'
 MYSQL_DB = 'job_spider_data'
 MYSQL_USER = 'root'
-MYSQL_PASSWORD = 'pasiwode'
+MYSQL_PASSWORD = ''
 MYSQL_PORT = 3306

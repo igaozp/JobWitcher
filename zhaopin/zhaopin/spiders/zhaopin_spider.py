@@ -100,7 +100,7 @@ class ZhaopinSpider(Spider):
 
         urls = []
         for city in city_id:
-            url = url_prefix + city + url_suffix;
+            url = url_prefix + city + url_suffix
             urls.append(url)
 
         for url in urls:

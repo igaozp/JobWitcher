@@ -21,6 +21,7 @@ class WueJobSpider(Spider):
     start_urls = ['https://www.51job.com/']
     agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' \
             '(KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36'
+
     custom_settings = {
         'COOKIES_ENABLE': False,
         'DEFAULT_REQUEST_HEADERS': {
@@ -50,7 +51,7 @@ class WueJobSpider(Spider):
                       'A1%FB%A1%FA99%A1%FB%A1%FA99%A1%FB%A1%FA%A1%FB%A1%FA2%A1%FB%A1%FA%A1%FB%A1%FA-1%A1%FB%A1%FA153'
                       '1801281%A1%FB%A1%FA0%A1%FB%A1%FA%A1%FB%A1%FA%7C%21collapse_expansion%7E%601%7C%21',
             'Host': 'search.51job.com',
-            'Referer': 'https://search.51job.com',
+            'Referer': 'https://search.51job.com/',
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
                           '(KHTML, like Gecko) Chrome/67.0.3396.99 Safari/537.36'
         }
@@ -167,7 +168,7 @@ class WueJobSpider(Spider):
             # 请求招聘信息的详细数据
             yield Request(url=url, meta={'item': item}, callback=self.parse_content, dont_filter=True)
 
-        # 爬取下一页
+        # 获取下一页
         pages = soup.select('#resultList > div.dw_page > div > div > div > ul > li > a')
         if len(pages) is not 0:
             next_page = pages[-1].get('href')
@@ -187,17 +188,18 @@ class WueJobSpider(Spider):
 
         # 获取职位的详细信息
         address = soup.select('body > div.tCompanyPage > div.tCompany_center.clearfix > div.tCompany_main > '
-                              'div:nth-of-type(3) > div > p')[0].get_text().strip()
-        experience = soup.select('body > div.tCompanyPage > div.tCompany_center.clearfix > div.tCompany_main > '
-                                 'div.tBorderTop_box.bt > div > div > span:nth-of-type(1)')[0].get_text().strip()
-        education = soup.select('body > div.tCompanyPage > div.tCompany_center.clearfix > div.tCompany_main > '
-                                'div.tBorderTop_box.bt > div > div > span:nth-of-type(2)')[0].get_text().strip()
-        head_count = soup.select('body > div.tCompanyPage > div.tCompany_center.clearfix > '
-                                 'div.tCompany_main > div.tBorderTop_box.bt > div > div > '
-                                 'span:nth-of-type(3)')[0].get_text().strip()
-        description = soup.select('body > div.tCompanyPage > div.tCompany_center.clearfix > '
-                                  'div.tCompany_main > div:nth-of-type(2) > div')[0].get_text().strip()
+                              'div:nth-of-type(2) > div > p')[0].get_text().strip()
 
+        base_info = soup.select('div.tCompany_center.clearfix > div.tHeader.tHjob > div '
+                                '> div.cn > p.msg.ltype')[0].get_text().strip()
+        experience = base_info.split('|')[1].strip()
+        education = base_info.split('|')[2].strip()
+        head_count = base_info.split('|')[3].strip()
+
+        descriptions = soup.select('div.tCompany_center.clearfix > div.tCompany_main > div:nth-of-type(1) > div > p')
+        description = ''
+        for line in descriptions:
+            description = description + line.get_text().strip()
         description = description.replace('\n', '')
         address = address.replace('上班地址：', '')
 

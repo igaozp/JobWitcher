@@ -42,8 +42,7 @@ class BosszhipinSpider(Spider):
         """
         super().__init__(**kwargs)
         self.logger.info('初始化 Redis 连接')
-        # self.redis_pool = redis.ConnectionPool(host='127.0.0.1', port=6379, password='', db=11)
-        self.redis_pool = redis.ConnectionPool(host='123.206.53.233', port=6378, password='', db=11)
+        self.redis_pool = redis.ConnectionPool(host='127.0.0.1', port=6379, password='', db=11)
         self.redis_db = redis.Redis(connection_pool=self.redis_pool)
 
     def start_requests(self):
