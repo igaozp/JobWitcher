@@ -1,12 +1,15 @@
 # -*- coding: utf-8 -*-
 __author__ = 'igaozp'
 
-from scrapy import signals
-import requests
 import logging
 import random
 
+import requests
+from scrapy import signals
+from scrapy.utils.project import get_project_settings
+
 logger = logging.getLogger(__name__)
+settings = get_project_settings()
 
 
 class ZhaopinSpiderMiddleware(object):
@@ -103,11 +106,11 @@ class ZhaopinDownloaderMiddleware(object):
 class ProxyMiddleware(object):
     def __init__(self):
         logger.info('获取代理池')
-        json_data = requests.get('http://123.207.35.36:5010/get_status/').json()
+        json_data = requests.get(settings.get('PROXY_POOL') + '/get_status/').json()
         proxy_size = json_data['useful_proxy']
         proxy_list = set([])
         for i in range(0, proxy_size):
-            content = str(requests.get('http://123.207.35.36:5010/get/').content, encoding='utf-8')
+            content = str(requests.get(settings.get('PROXY_POOL') + '/get/').content, encoding='utf-8')
             proxy = 'http://{}:{}'.format(content.split(':')[0], content.split(':')[1])
             proxy_list.add(proxy)
             logger.info('Proxy: ' + proxy)

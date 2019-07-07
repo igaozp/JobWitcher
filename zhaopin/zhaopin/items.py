@@ -26,7 +26,7 @@ class ZhaopinItem(scrapy.Item):
     # 工作要求
     job_require = scrapy.Field()
     # 发布日期
-    release_date = scrapy.Field()
+    public_date = scrapy.Field()
     # URL
     url = scrapy.Field()
     # 数据生成的时间

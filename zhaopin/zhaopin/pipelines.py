@@ -1,13 +1,15 @@
 # -*- coding: utf-8 -*-
 __author__ = 'igaozp'
 
-
-from scrapy.exceptions import DropItem
-import pymysql
-import redis
 import logging
 
+import pymysql
+import redis
+from scrapy.exceptions import DropItem
+from scrapy.utils.project import get_project_settings
+
 logger = logging.getLogger(__name__)
+settings = get_project_settings()
 
 
 class ZhaopinPipeline(object):
@@ -55,7 +57,10 @@ class ZhaopinPipeline(object):
                                        cursorclass=pymysql.cursors.DictCursor)
         self.cursor = self.connect.cursor()
         # 创建 Redis 数据库连接
-        self.redis_pool = redis.ConnectionPool(host='127.0.0.1', port=6379, password='', db=11)
+        self.redis_pool = redis.ConnectionPool(host=settings.get('REDIS_HOST'),
+                                               port=settings.get('REDIS_PORT'),
+                                               password=settings.get('REDIS_PASSWORD'),
+                                               db=settings.get('REDIS_DB'))
         self.redis_db = redis.Redis(connection_pool=self.redis_pool)
 
     def close_spider(self, spider):
@@ -94,8 +99,8 @@ class ZhaopinPipeline(object):
         向数据库插入数据
         :param item: 插入数据的对象实例
         """
-        sql = 'insert into zhaopin (job_name, salary, company_name, city, job_require, address, ' \
-              'experience, company_size, head_count, education_require, release_date, url, time) ' \
+        sql = 'insert into zhao_pin (job_name, salary, company_name, city, job_require, address, ' \
+              'experience, company_size, head_count, education_require, public_date, url, time) ' \
               'values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);'
         params = [
             item['job_name'],
@@ -108,7 +113,7 @@ class ZhaopinPipeline(object):
             item['company_size'],
             item['head_count'],
             item['education_require'],
-            item['release_date'],
+            item['public_date'],
             item['url'],
             item['time']
         ]

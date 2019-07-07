@@ -2,15 +2,20 @@
 
 __author__ = 'igaozp'
 
-from ..items import ZhaopinItem
-from scrapy import Spider, Request
-from bs4 import BeautifulSoup
 import datetime
-import logging
-import redis
 import json
+import logging
+import re
+
+import redis
+from bs4 import BeautifulSoup
+from scrapy import Spider, Request
+from scrapy.utils.project import get_project_settings
+
+from ..items import ZhaopinItem
 
 logger = logging.getLogger(__name__)
+settings = get_project_settings()
 
 
 class ZhaopinSpider(Spider):
@@ -25,11 +30,15 @@ class ZhaopinSpider(Spider):
     def __init__(self, **kwargs):
         """
         初始化 Redis 连接以及 headers 参数
+
         :param kwargs:
         """
         super().__init__(**kwargs)
         self.logger.info('初始化 Redis 连接')
-        self.redis_pool = redis.ConnectionPool(host='127.0.0.1', port=6379, password='', db=11)
+        self.redis_pool = redis.ConnectionPool(host=settings.get('REDIS_HOST'),
+                                               port=settings.get('REDIS_PORT'),
+                                               password=settings.get('REDIS_PASSWORD'),
+                                               db=settings.get('REDIS_DB'))
         self.redis_db = redis.Redis(connection_pool=self.redis_pool)
 
         self.headers = {
@@ -113,6 +122,7 @@ class ZhaopinSpider(Spider):
     def parse(self, response):
         """
         解析招聘列表的信息
+
         :param response: 页面返回的相应数据
         :return: item 对象
         """
@@ -137,7 +147,7 @@ class ZhaopinSpider(Spider):
 
                 item = ZhaopinItem()
                 item['job_name'] = result['jobName']
-                item['release_date'] = result['timeState']
+                item['public_date'] = result['timeState']
                 item['city'] = result['city']['display']
                 item['salary'] = result['salary']
                 item['url'] = url
@@ -161,38 +171,49 @@ class ZhaopinSpider(Spider):
         :param response: 页面返回的响应数据
         :return: item 对象
         """
+        global head_count_string
         soup = BeautifulSoup(response.text, 'lxml')
         item = response.meta['item']
 
-        job_requires = soup.select('div.terminalpage-main.clearfix > div > div:nth-of-type(1) > p')
-        if len(job_requires) is 0:
-            job_requires = soup.select('div.responsibility.pos-common > div.pos-ul > div')
+        # 解析职位要求
+        job_requires = soup.select('#root > '
+                                   'div:nth-child(4) > '
+                                   'div.app-main__left > '
+                                   'div.job-detail > '
+                                   'div.describtion > '
+                                   'div')
         job_require = ''
         for require in job_requires:
             job_require = job_require + require.get_text().strip()
 
+        # 解析工作地点
         try:
-            address = soup.select('div.company-box > ul > li:nth-of-type(4) > strong')[0].get_text().strip()
+            address = soup.select('#root > '
+                                  'div:nth-child(4) > '
+                                  'div.app-main__left > '
+                                  'div.job-detail > '
+                                  'div.job-address > '
+                                  'div > '
+                                  'span')[0].get_text().strip()
         except Exception as err:
-            print(err)
-            address = ''
-        try:
-            if address is '':
-                address = soup.select('div.pos-common.work-add.cl > p.add-txt')[0].get_text().strip()
-        except Exception as err:
-            print(err)
-            address = ''
-        try:
-            if address is '':
-                address = soup.select('div.promulgator-info.clearfix > ul > li:'
-                                      'nth-of-type(5) > strong')[0].get_text().strip()
-        except Exception as err:
-            print(err)
+            logger.error('解析[{}]工作地点错误, Error: {}'.format(item['url'], err))
             address = ''
 
+        # 解析招聘人数
+        try:
+            head_count_string = soup.select('#root > '
+                                            'div.job-summary > '
+                                            'div > div > '
+                                            'div.summary-plane__bottom > '
+                                            'div.summary-plane__left > '
+                                            'ul > li:last-child')[0].get_text().strip()
+            head_count = re.findall(r'\d+', head_count_string)[0]
+        except Exception as err:
+            logger.error('解析URL[{}]招聘人数错误, Error: {}'.format(item['url'], err))
+            head_count = ''
         item['job_require'] = job_require
         item['address'] = address
-        item['head_count'] = ''
+        item['head_count'] = head_count
         item['time'] = datetime.date.today()
 
         yield item

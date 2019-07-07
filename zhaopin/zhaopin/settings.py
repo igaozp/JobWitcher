@@ -45,6 +45,8 @@ COOKIES_ENABLED = False
 DOWNLOADER_MIDDLEWARES = {
     # 'zhaopin.middlewares.ZhaopinDownloaderMiddleware': 543,
     'zhaopin.random_user_agent.RandomUserAgent': 543,
+    'zhaopin.middlewares.ProxyMiddleware': 543,
+    'scrapy.downloadermiddleware.httpproxy.HttpProxyMiddleware': None
 }
 
 # Enable or disable extensions
@@ -87,3 +89,10 @@ MYSQL_DB = 'job_spider_data'
 MYSQL_USER = 'root'
 MYSQL_PASSWORD = ''
 MYSQL_PORT = 3306
+
+REDIS_HOST = '127.0.0.1'
+REDIS_PORT = 6379
+REDIS_DB = 11
+REDIS_PASSWORD = ''
+
+PROXY_POOL = ''
